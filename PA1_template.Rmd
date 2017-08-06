@@ -1,25 +1,110 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Project1"
+author: "Zhenzhen Ge"
+date: "8/4/2017"
+output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#rm(list=ls())
+#setwd("~/Downloads/Coursera/Reproducible Analysis_JohnHopkins")
+library(tidyverse)
+```
 
-## Loading and preprocessing the data
+### Part One
+```{r}
+library(dplyr)
+rawData <- read.csv("activity.csv")
+tidyData <- rawData[!is.na(rawData$steps),]
+stepsByDate <- tidyData %>%
+  group_by(date) %>%
+  summarise(stepsByDate = sum(steps))
+head(stepsByDate)
+
+# Histogram of the total number of steps taken per day
+hist(stepsByDate$stepsByDate,main="Histogram of Steps Per Day",xlab="Steps")
+
+# Mean and Median of the total number of steps taken per day
+mean(stepsByDate$stepsByDate)
+median(stepsByDate$stepsByDate)
+```
+
+### Part Two
+```{r}
+
+# To calculate the average steps, ignore all NAs in the dataset
+library(stringr)
+dailyPattern <- rawData %>%
+  group_by(interval) %>%
+  summarise(avgSteps = mean(steps,na.rm=T))
+
+# Plot the daily patter
+qplot(interval,avgSteps,data = dailyPattern,geom = "line",main = "Daily Pattern")
+
+# Find the interval with most steps
+dailyPattern[which.max(dailyPattern$avgSteps),1]
+```
+
+### Part Three:
+```{r}
+# Calculate NAs
+# Here I use the mean for that 5-minute interval to fill NAs
+sum(is.na(rawData))
+for (i in 1:nrow(rawData)){
+  if (is.na(rawData$steps[i])){
+    dat <- filter(rawData,interval==rawData$interval[i])
+    val <- mean(dat$steps,na.rm=T)
+    rawData$filledSteps[i] <- val
+  } else {
+    rawData$filledSteps[i] = rawData$steps[i]
+  }
+}
+
+# Create new dataset
+filledData <- rawData[,2:4]
+
+# Histogram of the total number of steps taken each day
+stepsByDateFilled <- filledData %>%
+  group_by(date) %>%
+  summarise(stepsByDate = sum(filledSteps))
+par(mfrow=c(2,1))
+hist(stepsByDate$stepsByDate,main="Histogram of Steps Per Day",xlab="Steps")
+hist(stepsByDateFilled$stepsByDate,main="Histogram of Steps Per Day with Filled Data",xlab="Steps")
+
+# Calculate and report the mean and median total number of steps taken per day
+mean(stepsByDateFilled$stepsByDate)
+median(stepsByDateFilled$stepsByDate)
+```
+    
+Comments:  
+The plots are similar, except the numbers of steps are increased a little bit in filled dataset. That's normal since we basically use 0 in previous dataset, but the averaged steps in the latter one. However, the trend are quite similar, which means filling missing data in this case won't affect our whole picture.
+
+
+### Part Four:
+```{r}
+# Include labels of weekday or not
+filledData$weekdayOrNot <- NA
+weekdayOrNot <- weekdays(as.Date(filledData$date))
+for (i in 1:nrow(filledData)){
+  if (weekdayOrNot[i] == "Saturday" | weekdayOrNot[i] == "Sunday"){
+    filledData$weekdayOrNot[i] <- "Weekend"
+  } else {
+    filledData$weekdayOrNot[i] <- "Weekday"
+  }
+}
+
+# Plot average steps accross weekdays and weekends
+dailyPatternFilled <- filledData %>%
+  group_by(interval,weekdayOrNot) %>%
+  summarise(avgSteps = mean(filledSteps,na.rm=T))
+qplot(interval,avgSteps,geom="line",facets = weekdayOrNot~.,data=dailyPatternFilled,main = "Average Steps by Weekdays and Weekends with Filled Data")
+```
 
 
 
-## What is mean total number of steps taken per day?
 
 
 
-## What is the average daily activity pattern?
 
 
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
